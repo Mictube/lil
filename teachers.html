@@ -429,7 +429,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
   <script>
     (async function(){
-      // Replace with same values used in landing.html
+      // Replace with same values used in index.html
     const SUPABASE_URL = 'https://cnjmvgkvbhlcruwuqubk.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNuam12Z2t2YmhsY3J1d3VxdWJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU2NTQwNDUsImV4cCI6MjA4MTIzMDA0NX0.zkDZK7lhSoO38bxb-nQ-x9QVdeyk7RDDDqHPGyuYGyk';
 
@@ -442,7 +442,7 @@
         const { data } = await sup.auth.getSession();
         if(!data || !data.session){
           // not logged in — redirect to landing page
-          try{ window.location.href = 'landing.html'; }catch(e){ /* ignore */ }
+          try{ window.location.href = 'index.html'; }catch(e){ /* ignore */ }
         }
         // Set brand text to the signed-in user's first name and set `.logo` to initials.
         try{
@@ -551,7 +551,7 @@
                 // mark explicit logout to prevent auto-login and clear stored creds
                 try{ localStorage.setItem('lf_explicit_logout','true'); localStorage.removeItem('lf_email'); localStorage.removeItem('lf_remember'); }catch(e){}
                 await sup.auth.signOut();
-                window.location.href = 'landing.html';
+                window.location.href = 'index.html';
               }catch(e){ console.warn('sign out failed', e); signOutBtn.disabled = false; }
             });
           }
