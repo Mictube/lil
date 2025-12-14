@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lil fairy award — Celebrate classroom magic</title>
+  <style>
+    :root{
+      --bg:#f7fbff; --card:#fff; --accent:#6c8cff; --accent-2:#7ee7c6; --muted:#6b7280; --glass: rgba(255,255,255,0.7);
+      --radius:14px; --shadow: 0 10px 30px rgba(20,30,80,0.06);
+      --maxw:1100px;
+    }
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:linear-gradient(180deg,var(--bg),#ffffff);color:#0b1220}
+    .wrap{max-width:var(--maxw);margin:28px auto;padding:28px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#9aa8ff);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:20px;box-shadow:0 8px 30px rgba(108,140,255,0.18)}
+    .brand-text{font-weight:800;font-size:18px}
+    nav{display:flex;gap:10px;align-items:center}
+    .nav-link{color:var(--muted);text-decoration:none;padding:10px;border-radius:10px}
+    .nav-cta{background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700}
+    .nav-btn{background:transparent;border:1px solid rgba(11,18,32,0.06);padding:8px 12px;border-radius:10px;cursor:pointer;color:var(--muted)}
+
+    .hero{display:grid;grid-template-columns:1fr 420px;gap:28px;align-items:center;margin-top:36px}
+    .hero-left h1{font-size:38px;margin:0 0 12px 0;line-height:1.02}
+    .lead{color:var(--muted);font-size:16px;margin-bottom:18px}
+    .cta-row{display:flex;gap:12px}
+    .btn-primary{background:var(--accent);color:#fff;padding:12px 18px;border-radius:12px;border:0;font-weight:800;cursor:pointer}
+    .btn-ghost{background:transparent;border:2px solid rgba(11,18,32,0.06);padding:10px 16px;border-radius:12px;cursor:pointer}
+
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+    .hero-right{display:flex;align-items:center;justify-content:center}
+    .fairy-wrap{width:360px;height:360px;border-radius:20px;background:linear-gradient(180deg,#ffffff,rgba(255,255,255,0.9));display:flex;align-items:center;justify-content:center;box-shadow:0 18px 50px rgba(108,140,255,0.08)}
+
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:28px}
+    .feature{padding:16px;border-radius:12px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 8px 30px rgba(20,30,80,0.04)}
+    .feature h4{margin:6px 0 4px 0}
+    .feature p{margin:0;color:var(--muted);font-size:14px}
+
+    footer{margin-top:36px;color:var(--muted);font-size:13px;padding:18px 0;text-align:center}
+
+    /* small screens */
+    @media (max-width:880px){
+      .hero{grid-template-columns:1fr;}
+      .hero-right{order:-1;margin-bottom:8px}
+      .fairy-wrap{width:92%;height:320px}
+      .logo{width:48px;height:48px}
+      .brand-text{font-size:16px}
+      .wrap{padding:16px}
+      .lead{font-size:15px}
+    }
+
+    /* small decorative animation */
+    .spark{transform-origin:50% 50%;animation:float 4s ease-in-out infinite}
+    @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+    /* Auth modal styles (modernized) */
+    .auth-backdrop{position:fixed;inset:0;background:linear-gradient(180deg, rgba(6,8,16,0.30), rgba(6,8,16,0.46));display:none;align-items:center;justify-content:center;z-index:1200;padding:20px}
+    .auth-modal{background:var(--card);padding:22px;border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(10,12,30,0.25);position:relative;border:1px solid rgba(11,18,32,0.04);font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto}
+    .auth-modal h3{margin-top:0;margin-bottom:6px;font-size:20px}
+    .auth-modal p.sub{margin:0 0 12px 0;color:var(--muted);font-size:14px}
+    .auth-row{display:flex;gap:10px;margin-bottom:12px}
+    .auth-row input, .auth-row select{flex:1;padding:12px;border-radius:12px;border:1px solid #eef2f8;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:inset 0 1px 0 rgba(255,255,255,0.6)}
+    .auth-row input:focus, .auth-row select:focus{outline:none;border-color:var(--accent);box-shadow:0 8px 20px rgba(107,70,255,0.06)}
+    .auth-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+    .auth-actions .nav-btn{background:transparent;border:1px solid rgba(11,18,32,0.06);padding:10px 14px;border-radius:10px;color:var(--muted)}
+    .auth-actions .nav-cta{background:linear-gradient(135deg,var(--accent),#9aa8ff);color:#fff;padding:10px 14px;border-radius:10px;border:0;font-weight:700}
+    .auth-close-x{position:absolute;right:12px;top:12px;width:36px;height:36px;border-radius:8px;border:0;background:transparent;color:#556;cursor:pointer;font-weight:800;font-size:18px;display:inline-flex;align-items:center;justify-content:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">LF</div>
+        <div>
+          <div class="brand-text">Lil fairy award</div>
+          <div style="font-size:12px;color:var(--muted)">Celebrate learning with magic</div>
+        </div>
+      </div>
+      <nav>
+        <a class="nav-link" href="#features">Features</a>
+        <a class="nav-link" href="#how">How it works</a>
+        <a class="nav-link" href="#about">About</a>
+          <button id="openSignup" class="nav-cta" style="background:linear-gradient(135deg,#7b46ff,#b86bff);border:0">Sign Up</button>
+          <button id="openLogin" class="nav-btn" style="border:1px solid rgba(11,18,32,0.06);">Log In</button>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="hero-left">
+        <h1>Brighten classroom moments — reward growth with a sprinkle of magic</h1>
+        <div class="lead">Lil fairy award helps teachers celebrate students with colorful badges, classroom rewards, and simple reports — built for playful learning.</div>
+        <div class="cta-row">
+          <button class="btn-primary" onclick="location.href='teachers.html'">Get Started — it's free</button>
+          <button class="btn-ghost" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Learn more</button>
+        </div>
+
+        <div style="margin-top:20px;display:flex;gap:12px;align-items:center">
+          <div class="card" style="display:flex;gap:12px;align-items:center">
+            <div style="width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,var(--accent-2),#9af5d6);display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:0 8px 30px rgba(126,231,198,0.12)">🏅</div>
+            <div>
+              <div style="font-weight:800">For teachers</div>
+              <div style="color:var(--muted);font-size:13px">Quick setup, classes, and simple reports</div>
+            </div>
+          </div>
+
+          <div class="card" style="display:flex;gap:12px;align-items:center">
+            <div style="width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#ffd6a5,#ffd7f0);display:flex;align-items:center;justify-content:center;font-weight:800">✨</div>
+            <div>
+              <div style="font-weight:800">For students</div>
+              <div style="color:var(--muted);font-size:13px">Friendly animations and stickers to celebrate wins</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="fairy-wrap card" role="img" aria-label="Lil fairy character">
+          <!-- Inline friendly fairy SVG (original) -->
+          <svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#ffd6f0"/><stop offset="1" stop-color="#dfe7ff"/></linearGradient>
+            </defs>
+            <g transform="translate(160,160)">
+              <!-- wings -->
+              <g opacity="0.95">
+                <ellipse class="spark" rx="86" ry="46" fill="#ffefe6" transform="translate(-70,-18) rotate(-18)"/>
+                <ellipse class="spark" rx="86" ry="46" fill="#e6f8ff" transform="translate(70,-18) rotate(18)"/>
+              </g>
+              <!-- body -->
+              <g transform="translate(0,18)">
+                <ellipse rx="42" ry="56" fill="#ffd8e8"/>
+                <rect x="-18" y="28" width="36" height="72" rx="18" fill="#6c8cff" transform="rotate(-6)"/>
+              </g>
+              <!-- head -->
+              <g transform="translate(0,-50)">
+                <circle r="32" fill="#fff0f6" stroke="#ffd6d6" stroke-width="1"/>
+                <circle r="4" cx="-10" cy="-4" fill="#2d3142" />
+                <circle r="4" cx="10" cy="-4" fill="#2d3142" />
+                <path d="M -10 8 q 10 10 20 0" stroke="#2d3142" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <g transform="translate(18,-10)">
+                  <circle r="6" fill="#ffdaa8"/>
+                </g>
+              </g>
+              <!-- wand -->
+              <g transform="translate(74,-6) rotate(18)">
+                <rect x="-4" y="-2" width="56" height="6" rx="3" fill="#6c8cff"/>
+                <circle cx="56" cy="1" r="10" fill="#ffd36b"/>
+                <g transform="translate(56,1)" fill="#fff">
+                  <path d="M0 -6 L2 -2 L6 -2 L3 0 L4 4 L0 2 L-4 4 L-3 0 L-6 -2 L-2 -2 Z"/>
+                </g>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" style="margin-top:26px">
+      <h3 style="margin:0 0 12px 0">Features</h3>
+      <div class="features">
+        <div class="feature">
+          <div style="font-size:22px">Classrooms & Badges</div>
+          <h4>Simple class setup</h4>
+          <p>Organize students, create tasks and award badges quickly from the teacher portal.</p>
+        </div>
+        <div class="feature">
+          <div style="font-size:22px">Playful rewards</div>
+          <h4>Stickers & celebrations</h4>
+          <p>Every award is a small celebration — animations and character reactions make wins feel special.</p>
+        </div>
+        <div class="feature">
+          <div style="font-size:22px">Reports & prints</div>
+          <h4>Printable summaries</h4>
+          <p>Download colorful reports for parents and classroom notes with one click.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div>© <strong>Lil fairy award</strong> — made with care for teachers and learners.</div>
+      <div style="margin-top:8px;color:var(--muted)">Not affiliated with any other product — an original, friendly classroom rewards experience.</div>
+    </footer>
+  </div>
+
+  <!-- Auth modals -->
+  <div id="signupBackdrop" class="auth-backdrop">
+    <div class="auth-modal">
+      <button class="auth-close-x" aria-label="Close">✕</button>
+      <h3>Create a teacher account</h3>
+      <p class="sub">Create an account to access the Teacher Portal.</p>
+      <div class="auth-row"><input id="suName" placeholder="Full name" /></div>
+      <div class="auth-row"><input id="suEmail" placeholder="Email" type="email"/></div>
+      <div class="auth-row"><input id="suUsername" placeholder="Username"/></div>
+      <div class="auth-row"><input id="suPassword" placeholder="Password" type="password"/></div>
+      <div class="auth-row"><input id="suRepeat" placeholder="Repeat password" type="password"/></div>
+      <div class="auth-row"><select id="suGrade"><option value="">Select grade (optional)</option><option>Kindergarten</option><option>1st</option><option>2nd</option><option>3rd</option><option>4th</option><option>5th</option><option>6th</option><option>7th</option><option>8th</option><option>9th</option><option>10th</option><option>11th</option><option>12th</option></select></div>
+      <div class="auth-actions"><button id="suCancel" class="nav-btn">Cancel</button><button id="suSubmit" class="nav-cta">Sign up</button></div>
+    </div>
+  </div>
+
+  <div id="loginBackdrop" class="auth-backdrop">
+    <div class="auth-modal">
+      <button class="auth-close-x" aria-label="Close">✕</button>
+      <h3>Log in</h3>
+      <p class="sub">Log in with your email and password.</p>
+      <div class="auth-row"><input id="liEmail" placeholder="Email" type="email"/></div>
+      <div class="auth-row"><input id="liPassword" placeholder="Password" type="password"/></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><label style="font-size:13px;color:var(--muted)"><input id="liRemember" type="checkbox" style="margin-right:8px"/> Remember me on this device</label></div>
+      <div id="liError" style="color:#a33;margin-top:6px;min-height:18px"></div>
+      <div class="auth-actions"><button id="liCancel" class="nav-btn">Cancel</button><button id="liSubmit" class="nav-cta">Log in</button></div>
+    </div>
+  </div>
+
+  <style>
+    .lf-spinner{display:inline-block;width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.95);animation:spin .9s linear infinite;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .lf-inline-error{color:#b91c1c;font-size:13px;margin-top:6px;min-height:18px}
+  </style>
+
+  <script>
+    // small progressive enhancements
+    document.querySelectorAll('.spark').forEach((el,i)=>{ el.style.transition='transform 400ms ease'; setInterval(()=>{ el.style.transform = `translateY(${(i%2? -6: -3)}px) rotate(${(i%2? -4:4)}deg)`; setTimeout(()=>el.style.transform='translateY(0) rotate(0deg)',1800); }, 2600 + i*200); });
+
+    // --- Supabase auth integration (replace placeholders with your project values) ---
+    // 1) Create a Supabase project and obtain SUPABASE_URL and SUPABASE_ANON_KEY
+    // 2) Replace the values below with your project's values
+    const SUPABASE_URL = 'https://cnjmvgkvbhlcruwuqubk.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNuam12Z2t2YmhsY3J1d3VxdWJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU2NTQwNDUsImV4cCI6MjA4MTIzMDA0NX0.zkDZK7lhSoO38bxb-nQ-x9QVdeyk7RDDDqHPGyuYGyk';
+
+    // load supabase client and wire auth UI
+    (function(){
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js';
+      s.onload = ()=> initAuth();
+      document.head.appendChild(s);
+    })();
+
+    function initAuth(){
+      if(typeof supabase === 'undefined'){ console.warn('Supabase client failed to load'); return; }
+      window._lf_supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const signupBackdrop = document.getElementById('signupBackdrop');
+      const loginBackdrop = document.getElementById('loginBackdrop');
+      document.getElementById('openSignup').addEventListener('click', ()=> { signupBackdrop.style.display='flex'; signupBackdrop.querySelector('input')?.focus(); });
+      document.getElementById('openLogin').addEventListener('click', ()=> { loginBackdrop.style.display='flex'; loginBackdrop.querySelector('input')?.focus(); });
+      document.getElementById('suCancel').addEventListener('click', ()=> signupBackdrop.style.display='none');
+      document.getElementById('liCancel').addEventListener('click', ()=> loginBackdrop.style.display='none');
+
+      // wire modal close X buttons
+      document.querySelectorAll('.auth-close-x').forEach(x => x.addEventListener('click', ()=> { x.closest('.auth-backdrop').style.display='none'; }));
+
+      const suErrorEl = (function(){ const d = document.createElement('div'); d.id='suError'; d.className='lf-inline-error'; const parent = document.querySelector('#signupBackdrop .auth-modal'); parent.insertBefore(d, parent.querySelector('.auth-actions')); return d; })();
+
+      document.getElementById('suSubmit').addEventListener('click', async ()=>{
+        const name = document.getElementById('suName').value.trim();
+        const email = document.getElementById('suEmail').value.trim();
+        const username = document.getElementById('suUsername').value.trim();
+        const pwd = document.getElementById('suPassword').value;
+        const rpt = document.getElementById('suRepeat').value;
+        const grade = document.getElementById('suGrade').value || null;
+        suErrorEl.textContent = '';
+        if(!name || !email || !username || !pwd){ suErrorEl.textContent = 'Please fill name, email, username and password'; return; }
+        if(pwd.length < 6){ suErrorEl.textContent = 'Password must be at least 6 characters'; return; }
+        if(pwd !== rpt){ suErrorEl.textContent = 'Passwords do not match'; return; }
+        const btn = document.getElementById('suSubmit'); btn.disabled = true; const spinner = document.createElement('span'); spinner.className='lf-spinner'; btn.prepend(spinner);
+        try{
+          const sup = window._lf_supabase;
+          // sign up and store small metadata (username, full name, grade)
+          const { data, error } = await sup.auth.signUp({ email, password: pwd }, { data: { full_name: name, username, grade } });
+          if(error){ suErrorEl.textContent = 'Sign up error: ' + error.message; return; }
+          // try to write a profiles row in the DB (requires `profiles` table + RLS policy)
+          try{
+            const userId = data && data.user && data.user.id ? data.user.id : (await sup.auth.getUser()).data.user?.id;
+            if(userId){
+              const profile = { id: userId, full_name: name, username: username, grade: grade, created_at: new Date().toISOString() };
+              const { error: pErr } = await sup.from('profiles').insert(profile);
+              if(pErr){ console.warn('profiles insert error (non-fatal):', pErr); }
+            }
+          }catch(pe){ console.warn('profiles write failed', pe); }
+          alert('Sign up successful. Please check your email if confirmation is required. You can now log in.');
+          signupBackdrop.style.display='none';
+          loginBackdrop.style.display='flex';
+        }catch(e){ console.error(e); alert('Sign up failed: '+String(e)); }
+        finally{ btn.disabled = false; if(spinner && spinner.parentNode) spinner.remove(); }
+      });
+
+      const liErrorEl = document.getElementById('liError');
+      document.getElementById('liSubmit').addEventListener('click', async ()=>{
+        liErrorEl.textContent = '';
+        const email = document.getElementById('liEmail').value.trim();
+        const pwd = document.getElementById('liPassword').value;
+        const remember = !!document.getElementById('liRemember').checked;
+        if(!email || !pwd){ liErrorEl.textContent = 'Enter email and password'; return; }
+        const btn = document.getElementById('liSubmit'); btn.disabled = true; const spinner = document.createElement('span'); spinner.className='lf-spinner'; btn.prepend(spinner);
+        try{
+          const sup = window._lf_supabase;
+          const { data, error } = await sup.auth.signInWithPassword({ email, password: pwd });
+          if(error){ liErrorEl.textContent = 'Login error: ' + error.message; return; }
+          // clear explicit-logout flag on successful login
+          try{ localStorage.removeItem('lf_explicit_logout'); }catch(e){}
+          // persist remember preference locally for auto-redirect decisions
+          try{ localStorage.setItem('lf_remember', remember ? 'true' : 'false'); }catch(e){}
+          // store only the email when remembering — do NOT store passwords in localStorage
+          try{ if(remember){ localStorage.setItem('lf_email', email); } else { localStorage.removeItem('lf_email'); } }catch(e){}
+          // on success redirect to teacher portal
+          window.location.href = 'teachers.html';
+        }catch(e){ console.error(e); liErrorEl.textContent = 'Login failed: '+String(e); }
+        finally{ btn.disabled = false; if(spinner && spinner.parentNode) spinner.remove(); }
+      });
+
+      // if a session exists, optionally auto-redirect to teacher portal
+      (async ()=>{
+        try{
+          const sup = window._lf_supabase;
+          const { data } = await sup.auth.getSession();
+          const remember = localStorage.getItem('lf_remember') === 'true';
+          if(data && data.session){
+            // Auto-redirect only when user previously opted into Remember me - otherwise show small prompt
+            if(remember){ window.location.href = 'teachers.html'; }
+            else {
+              // show a non-blocking banner offering to continue to portal
+              const b = document.createElement('div'); b.style.cssText='position:fixed;right:18px;bottom:18px;background:#fff;padding:12px;border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,0.12);z-index:1400';
+              b.innerHTML = `Signed in — <a href='teachers.html' style='font-weight:800;color:#2563eb'>Open Portal</a> <button id='lfDismiss' style='margin-left:8px;padding:6px;border-radius:8px;border:0;background:#eee'>Dismiss</button>`;
+              document.body.appendChild(b);
+              document.getElementById('lfDismiss').addEventListener('click', ()=> b.remove());
+            }
+          } else {
+            // No active session — prefill saved email (do not auto-login)
+            try{
+              if(localStorage.getItem('lf_explicit_logout') === 'true') return;
+              const savedEmail = localStorage.getItem('lf_email');
+              if(savedEmail){ const liEmailEl = document.getElementById('liEmail'); if(liEmailEl) liEmailEl.value = savedEmail; const note = document.createElement('div'); note.style.cssText='position:fixed;right:18px;bottom:18px;background:#fff;padding:10px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.08);z-index:1400;font-size:13px;color:var(--muted)'; note.textContent='Welcome back — enter your password to continue.'; document.body.appendChild(note); setTimeout(()=>note.remove(),3500); }
+            }catch(e){}
+          }
+        }catch(e){}
+      })();
+    }
+  </script>
+</body>
+</html>
