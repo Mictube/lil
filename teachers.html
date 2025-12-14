@@ -249,6 +249,13 @@
       .topbar.moved-to-app{position:absolute;top:0;left:0;right:0;background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(250,250,250,0.95));backdrop-filter:blur(6px);box-shadow:0 8px 30px rgba(10,12,30,0.08);padding:8px 12px;z-index:1700}
       /* ensure main content sits below the moved topbar */
       .main{padding-top:88px}
+
+      /* App topline (currentMeta, counts, account) pinned at viewport top */
+      .app-topline{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,250,250,0.98));box-shadow:0 8px 30px rgba(10,12,30,0.06);z-index:1800}
+      .app-topline #currentMeta{max-width:48ch}
+      @media (max-width:560px){ .app-topline{padding:8px 12px} .app-topline .counts{display:none} }
+      /* Reserve vertical space so main content is not covered by the fixed topline */
+      .main{padding-top:calc(88px + 64px);} 
       /* Compact class actions pinned to top of main: horizontal, small buttons */
       .main > #classActionsBar{display:flex !important;gap:8px;align-items:center;justify-content:flex-start;position:sticky;top:12px;z-index:1200;padding:6px 6px;margin-bottom:8px}
       .main > #classActionsBar .action-btn{padding:8px 10px;font-size:13px;border-radius:10px}
@@ -435,7 +442,7 @@
         const { data } = await sup.auth.getSession();
         if(!data || !data.session){
           // not logged in — redirect to landing page
-          try{ window.location.href = 'index.html'; }catch(e){ /* ignore */ }
+          try{ window.location.href = 'landing.html'; }catch(e){ /* ignore */ }
         }
         // Set brand text to the signed-in user's first name and set `.logo` to initials.
         try{
@@ -653,34 +660,7 @@
     </aside>
 
     <main class="main">
-      <div class="topbar" style="position:relative;display:flex;align-items:center;gap:12px;justify-content:space-between">
-        <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
-          <button id="mobileMenuBtn" aria-label="Open menu" title="Menu" style="display:none;border:0;background:transparent;font-size:20px;padding:6px;">☰</button>
-          <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
-            <div id="currentMeta" style="color:#3b1f7a;font-weight:800;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:rgba(123,76,255,0.08);padding:6px 10px;border-radius:8px;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56ch">Class Name</div>
-            <div class="counts" id="classCounts" style="color:var(--muted);font-size:13px">0 students · 0 tasks</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:12px;align-items:center">
-          <div id="topbarActions" style="display:none;gap:12px;align-items:center;margin-right:6px"></div>
-          <div id="accountMenu" style="position:relative">
-            <button id="accountBtn" class="small-btn" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:8px;padding:6px;border-radius:999px">
-              <img id="accountAvatar" src="" alt="Account" style="width:28px;height:28px;border-radius:999px;object-fit:cover;background:#fff"/>
-              <span style="font-weight:800">▾</span>
-            </button>
-            <div id="accountDropdown" style="position:absolute;right:0;top:42px;display:none;min-width:220px;background:#fff;border-radius:10px;box-shadow:0 12px 36px rgba(20,30,80,0.08);padding:8px;z-index:1400">
-              <div id="accountOverview" style="padding:8px">
-                <div id="acctName" style="font-weight:800"></div>
-                <div id="acctEmail" style="color:#666;font-size:13px"></div>
-              </div>
-              <div style="border-top:1px solid #f0f2f6;margin-top:8px;padding-top:8px;display:flex;flex-direction:column;gap:8px">
-                <button id="openAccountBtn" class="small-btn" style="width:100%">Account</button>
-                <button id="signOutBtn" class="small-btn" style="width:100%">Sign Out</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      
 
       <section id="welcome" class="grid">
         <div class="card">
@@ -716,6 +696,36 @@
           <!-- Single child list lives here (hidden until a class is opened) -->
           <div id="childList" class="child-list" style="margin-top:18px;display:none"></div>
       </section>
+
+      <!-- Move topbar here (under #classArea) as requested -->
+      <div class="topbar" style="position:relative;display:flex;align-items:center;gap:12px;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+          <button id="mobileMenuBtn" aria-label="Open menu" title="Menu" style="display:none;border:0;background:transparent;font-size:20px;padding:6px;">☰</button>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+            <div id="currentMeta" style="color:#3b1f7a;font-weight:800;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:rgba(123,76,255,0.08);padding:6px 10px;border-radius:8px;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56ch">Class Name</div>
+            <div class="counts" id="classCounts" style="color:var(--muted);font-size:13px">0 students · 0 tasks</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div id="topbarActions" style="display:none;gap:12px;align-items:center;margin-right:6px"></div>
+          <div id="accountMenu" style="position:relative">
+            <button id="accountBtn" class="small-btn" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:8px;padding:6px;border-radius:999px">
+              <img id="accountAvatar" src="" alt="Account" style="width:28px;height:28px;border-radius:999px;object-fit:cover;background:#fff"/>
+              <span style="font-weight:800">▾</span>
+            </button>
+            <div id="accountDropdown" style="position:absolute;right:0;top:42px;display:none;min-width:220px;background:#fff;border-radius:10px;box-shadow:0 12px 36px rgba(20,30,80,0.08);padding:8px;z-index:1400">
+              <div id="accountOverview" style="padding:8px">
+                <div id="acctName" style="font-weight:800"></div>
+                <div id="acctEmail" style="color:#666;font-size:13px"></div>
+              </div>
+              <div style="border-top:1px solid #f0f2f6;margin-top:8px;padding-top:8px;display:flex;flex-direction:column;gap:8px">
+                <button id="openAccountBtn" class="small-btn" style="width:100%">Account</button>
+                <button id="signOutBtn" class="small-btn" style="width:100%">Sign Out</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -760,7 +770,17 @@
         const appEl = document.querySelector('.app'); if(!appEl) return;
         function moveIn(){
           if(appEl.contains(btn) && btn.classList.contains('mobile-menu-main')) return;
-          // insert at the start of the app so it appears at the top-left of the app container
+          // Prefer inserting into the app-topline left column if it exists to avoid flicker.
+          const wrapper = document.querySelector('.app-topline');
+          if(wrapper){
+            const left = wrapper.children && wrapper.children[0];
+            if(left) {
+              left.insertBefore(btn, left.firstChild || null);
+              btn.classList.add('mobile-menu-main');
+              return;
+            }
+          }
+          // fallback: insert at the start of the app so it appears at the top-left of the app container
           appEl.insertBefore(btn, appEl.firstChild);
           btn.classList.add('mobile-menu-main');
         }
@@ -771,7 +791,9 @@
           if(host){ if(btn.__originalNext && btn.__originalNext.parentNode === host) host.insertBefore(btn, btn.__originalNext); else host.appendChild(btn); }
           btn.classList.remove('mobile-menu-main');
         }
-        function apply(){ if(window.innerWidth <= 560) moveIn(); else moveOut(); }
+        // Always keep the mobile button inside the app-topline to avoid it being hidden
+        // by its original inline `display:none` on larger screens.
+        function apply(){ try{ moveIn(); }catch(e){ console.warn('mobileBtn apply failed', e); } }
         window.addEventListener('resize', apply);
         setTimeout(apply, 20);
       }catch(e){ console.warn('manageMobileMenuPlacement failed', e); }
@@ -1617,7 +1639,9 @@
             sidebar.classList.add('open'); sidebar.classList.remove('collapsed'); collapseBtn.setAttribute('aria-expanded','true');
             // create backdrop
             if(!document.getElementById('sidebarBack')){
-              const back = document.createElement('div'); back.id = 'sidebarBack'; back.style.position='fixed'; back.style.inset='0'; back.style.background='rgba(0,0,0,0.28)'; back.style.zIndex = 1190; back.tabIndex = -1;
+              const back = document.createElement('div'); back.id = 'sidebarBack'; back.style.position='fixed'; back.style.inset='0'; back.style.background='rgba(0,0,0,0.28)';
+              try{ const sbz = parseInt(window.getComputedStyle(sidebar).zIndex)||1200; back.style.zIndex = String(Math.max(0, sbz-1)); }catch(e){ back.style.zIndex = 1190; }
+              back.tabIndex = -1;
               back.addEventListener('click', ()=>{ sidebar.classList.remove('open'); back.remove(); collapseBtn.setAttribute('aria-expanded','false'); });
               document.body.appendChild(back);
               const escHandler = (ev)=>{ if(ev.key === 'Escape'){ sidebar.classList.remove('open'); const b = document.getElementById('sidebarBack'); if(b) b.remove(); collapseBtn.setAttribute('aria-expanded','false'); document.removeEventListener('keydown', escHandler); } };
@@ -1644,13 +1668,25 @@
       mobileMenuBtn.addEventListener('click', ()=>{
         try{
           const small = window.innerWidth <= 960;
-          if(!small) return; // desktop uses collapseBtn
-          // reuse collapse behavior: open overlay if closed
+          if(!small){
+            // Desktop behavior: toggle collapsed state (same as collapseBtn)
+            try{
+              if(collapseBtn){ collapseBtn.click(); } else {
+                const isCollapsed = sidebar.classList.toggle('collapsed');
+                collapseBtn && collapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+                updateCollapseButtonUI();
+              }
+            }catch(e){ console.warn('desktop mobileBtn toggle failed', e); }
+            return;
+          }
+          // Small screens: reuse collapse behavior to open overlay if closed
           if(!sidebar.classList.contains('open')){
             sidebar.classList.add('open'); sidebar.classList.remove('collapsed');
             // create backdrop if not present
             if(!document.getElementById('sidebarBack')){
-              const back = document.createElement('div'); back.id = 'sidebarBack'; back.style.position='fixed'; back.style.inset='0'; back.style.background='rgba(0,0,0,0.28)'; back.style.zIndex = 1190; back.tabIndex = -1;
+              const back = document.createElement('div'); back.id = 'sidebarBack'; back.style.position='fixed'; back.style.inset='0'; back.style.background='rgba(0,0,0,0.28)';
+              try{ const sbz = parseInt(window.getComputedStyle(sidebar).zIndex)||1200; back.style.zIndex = String(Math.max(0, sbz-1)); }catch(e){ back.style.zIndex = 1190; }
+              back.tabIndex = -1;
               back.addEventListener('click', ()=>{ sidebar.classList.remove('open'); back.remove(); collapseBtn && collapseBtn.setAttribute('aria-expanded','false'); });
               document.body.appendChild(back);
               const escHandler = (ev)=>{ if(ev.key === 'Escape'){ sidebar.classList.remove('open'); const b = document.getElementById('sidebarBack'); if(b) b.remove(); collapseBtn && collapseBtn.setAttribute('aria-expanded','false'); document.removeEventListener('keydown', escHandler); } };
@@ -3057,5 +3093,117 @@
   <!-- Diagnostic check-in removed. -->
 
   
+  <script>
+  (function forceTopline(){
+    function injectCSS(css){
+      try{ const s=document.createElement('style'); s.appendChild(document.createTextNode(css)); document.head.appendChild(s); }catch(e){ console.warn('injectCSS failed', e); }
+    }
+    // Keep styling focused on the wrapper. Account will live inside it, not separately fixed.
+    injectCSS('\n.force-top-topline{position:fixed !important;top:0;left:0;right:0;z-index:2200;background:rgba(255,255,255,0.98);box-shadow:0 8px 30px rgba(10,12,30,0.06);}\n.force-top-topline .account-inline{display:flex;align-items:center;gap:8px;}\n.force-top-topline .account-inline #accountBtn{padding:4px;height:32px;border-radius:999px;}\n.force-top-topline .account-inline #accountAvatar{width:20px;height:20px;border-radius:999px;object-fit:cover;}\n/* Force hamburger visible and styled inside the topline */\n.app-topline #mobileMenuBtn{display:inline-flex !important;visibility:visible !important;opacity:1 !important;border:0;background:transparent !important;font-size:20px !important;padding:6px !important;margin-right:8px !important;}\n.app-topline #mobileMenuBtn svg, .app-topline #mobileMenuBtn img{width:20px;height:20px;}\n');
+
+    function ensureWrapper(){
+      // Ensure there is an `.app-topline` wrapper that contains #currentMeta and #classCounts.
+      let wrapper = document.querySelector('.app-topline');
+      const cur = document.getElementById('currentMeta');
+      const counts = document.getElementById('classCounts');
+      const main = document.querySelector('.main');
+      if(!cur || !counts || !main) return wrapper;
+      if(!wrapper){
+        wrapper = document.createElement('div'); wrapper.className = 'app-topline';
+        wrapper.style.display = 'flex'; wrapper.style.gap = '12px'; wrapper.style.alignItems = 'center'; wrapper.style.justifyContent = 'space-between';
+        wrapper.style.position = 'relative';
+
+        // LEFT: mobile menu button (hamburger)
+        const left = document.createElement('div'); left.style.display='flex'; left.style.alignItems='center'; left.style.gap='8px';
+        const mobileBtn = document.getElementById('mobileMenuBtn');
+        if(mobileBtn){
+          mobileBtn.style.display='inline-flex'; mobileBtn.style.border='0'; mobileBtn.style.background='transparent'; mobileBtn.style.fontSize='20px'; mobileBtn.style.padding='6px';
+          mobileBtn.setAttribute('aria-label','Open menu');
+          left.appendChild(mobileBtn);
+        }
+
+        // CENTER: class name + counts stacked
+        const center = document.createElement('div'); center.style.display='flex'; center.style.flexDirection='column'; center.style.alignItems='center'; center.style.justifyContent='center'; center.style.minWidth='0';
+        center.appendChild(cur);
+        center.appendChild(counts);
+
+        // RIGHT: account/menu actions
+        const right = document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='8px'; right.className='account-inline';
+        const acct = document.getElementById('accountMenu');
+        if(acct){ right.appendChild(acct); }
+
+        wrapper.appendChild(left);
+        wrapper.appendChild(center);
+        wrapper.appendChild(right);
+
+        // place wrapper as the first child of .main (so it's visually at top of app)
+        main.insertBefore(wrapper, main.firstChild);
+      }
+      return wrapper;
+    }
+
+    function ensureSidebarControls(){
+      // Ensure collapseBtn is visible and mobileBtn toggles sidebar
+      try{
+        const sidebar = document.getElementById('sidebar'); if(!sidebar) return;
+        const collapseBtn = document.getElementById('collapseBtn');
+        if(collapseBtn){ collapseBtn.style.display = 'inline-flex'; collapseBtn.setAttribute('aria-expanded', String(!sidebar.classList.contains('collapsed'))); }
+
+        const mobileBtn = document.getElementById('mobileMenuBtn');
+        if(mobileBtn){
+          // wire toggle behavior to open/close overlay sidebar on small screens
+          mobileBtn.addEventListener('click', function(){
+            try{
+              const isOpen = sidebar.classList.toggle('open');
+              // ensure overlay backdrop
+              let back = document.getElementById('sidebarBack');
+              if(isOpen){
+                if(!back){ back = document.createElement('div'); back.id = 'sidebarBack'; back.style.position='fixed'; back.style.left='0'; back.style.top='0'; back.style.right='0'; back.style.bottom='0'; back.style.background='rgba(0,0,0,0.28)';
+                  try{ const sbz = parseInt(window.getComputedStyle(sidebar).zIndex)||1200; back.style.zIndex = String(Math.max(0, sbz-1)); }catch(e){ back.style.zIndex='1190'; }
+                  document.body.appendChild(back); back.addEventListener('click', ()=>{ sidebar.classList.remove('open'); back.remove(); }); }
+                if(collapseBtn) collapseBtn.setAttribute('aria-expanded','true');
+              } else {
+                if(back) back.remove(); if(collapseBtn) collapseBtn.setAttribute('aria-expanded','false');
+              }
+            }catch(e){ console.warn('mobile menu toggle failed', e); }
+          });
+        }
+      }catch(e){ console.warn('ensureSidebarControls failed', e); }
+    }
+
+    function apply(){
+      try{
+        const wrapper = ensureWrapper();
+        const main = document.querySelector('.main');
+        if(wrapper){
+          wrapper.classList.add('force-top-topline');
+          wrapper.style.padding = wrapper.style.padding || '8px 12px';
+          // avoid overlap: add top padding to main equal to wrapper height
+          if(main){
+            const h = Math.ceil(wrapper.getBoundingClientRect().height || 48);
+            main.style.paddingTop = (h + 8) + 'px';
+          }
+        }
+
+        // compact account visuals when inside the wrapper
+        const acct = document.getElementById('accountMenu');
+        if(acct){
+          acct.classList.remove('force-top-account');
+          const btn = acct.querySelector('#accountBtn');
+          if(btn){ btn.style.padding='4px'; btn.style.height='32px'; }
+          const img = acct.querySelector('#accountAvatar'); if(img){ img.style.width='20px'; img.style.height='20px'; }
+        }
+
+        ensureSidebarControls();
+      }catch(e){ console.warn('forceTopline apply failed', e); }
+    }
+
+    document.addEventListener('DOMContentLoaded', apply);
+    window.addEventListener('resize', function(){ setTimeout(apply,60); });
+    // run once in case DOMContentLoaded already fired
+    setTimeout(apply, 80);
+  })();
+  </script>
+
   </body>
   </html>
