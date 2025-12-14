@@ -435,7 +435,7 @@
         const { data } = await sup.auth.getSession();
         if(!data || !data.session){
           // not logged in — redirect to landing page
-          try{ window.location.href = 'landing.html'; }catch(e){ /* ignore */ }
+          try{ window.location.href = 'index.html'; }catch(e){ /* ignore */ }
         }
         // Set brand text to the signed-in user's first name and set `.logo` to initials.
         try{
