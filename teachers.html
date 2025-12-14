@@ -7,7 +7,7 @@
   <style>
     :root{--bg:#f6f8fb;--card:#ffffff;--muted:#8b96a8;--accent:#6b46ff;--accent-2:#7dd7ff}
     html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;background:var(--bg);color:#222}
-    .app{display:flex;min-height:100vh}
+    .app{display:flex;min-height:100vh;position:relative}
 
     /* Sidebar */
     .sidebar{width:340px;background:linear-gradient(180deg,#fff,#fbfbff);border-right:1px solid #eef2f8;padding:20px;box-sizing:border-box;transition:transform .28s ease,width .28s ease;padding .28s ease;display:flex;flex-direction:column;gap:18px;height:100vh;position:fixed;left:0;top:0;bottom:0;z-index:40}
@@ -188,14 +188,25 @@
     }
 
     /* Topbar responsiveness for narrow screens */
-    @media (max-width:640px){
-      .topbar{flex-wrap:wrap;gap:8px}
+    @media (max-width:960px){
+      .topbar{flex-wrap:wrap;gap:6px;padding:6px 0}
       #topbarActions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;order:2}
       .topbar > div:first-child{flex-basis:100%;order:1;min-width:0}
       #currentMeta{max-width:100%;white-space:normal;overflow:visible}
       .topbar .action-btn{padding:10px 12px;font-size:14px}
       .topbar .small-btn{padding:10px 12px;font-size:14px}
       #accountMenu{order:3;width:100%;display:flex;justify-content:flex-end}
+    }
+
+    @media (max-width:560px){
+      /* Reduce main padding so content uses top area */
+      .main{padding:10px 12px;margin-left:0}
+      .topbar{padding:6px 6px;margin-bottom:6px}
+      /* Reduce welcome card sizes so class content sits higher when shown */
+      #welcome{margin-top:6px}
+      .card{padding:12px}
+      /* ensure classArea sits near top when opened */
+      #classArea{margin-top:6px}
     }
 
     /* Reports modal: make controls stack on narrow screens and allow select to expand to full width */
@@ -207,7 +218,53 @@
       #repStu{width:100% !important;flex:1 1 auto}
       #gen{width:100%;box-sizing:border-box}
       #downloadPdf{width:100%;box-sizing:border-box;margin-left:0}
+      /* Mobile layout improvements */
+      .sidebar{transform:translateX(-100%);position:fixed;left:0;top:0;height:100vh;width:86%;max-width:420px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 30px 80px rgba(0,0,0,0.18);z-index:1200;transition:transform .28s ease}
+      .sidebar.open{transform:translateX(0)}
+      .main{margin-left:0;padding:16px}
+      /* two doors per row on narrow phones */
+      .child-list{grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px;padding:8px}
+      .child-card,.student-card,.card{width:100%;max-width:100%}
+      /* reduce door/avatar sizes so two doors fit comfortably */
+      .door-wrap{max-width:100%;aspect-ratio:160/220;margin:4px auto}
+      .door-avatar{width:clamp(56px,18vw,92px);height:clamp(56px,18vw,92px)}
+      .topbar{flex-direction:column;align-items:stretch;gap:8px}
+      #topbarActions{width:100%;display:flex;flex-direction:column;gap:8px}
+      .action-btn,.small-btn,.signout-btn{width:100%;box-sizing:border-box}
+      .modal{width:95vw;max-width:95vw;padding:16px}
+      .report-controls{flex-direction:column;align-items:stretch}
+      #repStu,#repFrom,#repTo,#gen,#downloadPdf{width:100%;flex:1 1 auto}
+      input,select,textarea{font-size:16px}
+      .mailbox{right:10px;bottom:12px;width:72px;height:44px}
+      /* hide large sidebar action pills on mobile to avoid huge stacked buttons */
+      .side-actions .action-btn, .side-actions .small-btn{display:none}
+      /* ensure mobile menu button sits inline in topbar and is easy to tap */
+      #mobileMenuBtn{display:inline-flex !important;padding:10px 12px;font-size:20px;border-radius:8px;background:rgba(255,255,255,0.9);box-shadow:0 6px 18px rgba(10,12,30,0.06);align-items:center}
+      /* compact class actions when moved into topbar */
+      #topbarActions .action-btn{padding:8px 10px;font-size:14px;border-radius:8px}
+      #topbarActions .small-btn{padding:8px 10px;font-size:14px;border-radius:8px}
     }
+
+      /* When topbar is moved into the .app container, pin it to the app top so it truly sits at the very top */
+      .topbar.moved-to-app{position:absolute;top:0;left:0;right:0;background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(250,250,250,0.95));backdrop-filter:blur(6px);box-shadow:0 8px 30px rgba(10,12,30,0.08);padding:8px 12px;z-index:1700}
+      /* ensure main content sits below the moved topbar */
+      .main{padding-top:88px}
+      /* Compact class actions pinned to top of main: horizontal, small buttons */
+      .main > #classActionsBar{display:flex !important;gap:8px;align-items:center;justify-content:flex-start;position:sticky;top:12px;z-index:1200;padding:6px 6px;margin-bottom:8px}
+      .main > #classActionsBar .action-btn{padding:8px 10px;font-size:13px;border-radius:10px}
+      .main > #classActionsBar .small-btn{padding:6px 8px;font-size:13px;border-radius:10px}
+      /* compact variant when space is tight */
+      #classActionsBar.compact-actions{gap:6px}
+      /* layout: actions + meta on the left, account on the right */
+      .topbar{display:flex;align-items:center;justify-content:space-between}
+      .topbar > div:first-child{flex:1;min-width:0}
+      #topbarActions{display:flex;gap:8px;align-items:center;flex-direction:row;overflow:auto}
+      #topbarActions .action-btn{padding:6px 8px;font-size:13px;border-radius:10px;min-width:40px}
+      #topbarActions .small-btn{padding:6px 8px;font-size:13px;border-radius:10px;min-width:36px}
+      /* compact class name meta to a single line */
+      #currentMeta{display:inline-block;padding:6px 8px;border-radius:10px;font-size:15px}
+      /* mobile menu button when moved into main (top-left of main area) */
+      .mobile-menu-main{position:absolute;left:10px;top:10px;z-index:1620;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.95);box-shadow:0 8px 20px rgba(0,0,0,0.08);font-size:18px}
 
     /* Lightweight students summary (avoid heavy card visuals) */
     /* students-summary removed */
@@ -494,6 +551,85 @@
         }catch(e){}
       }catch(e){ console.warn('Auth check failed', e); }
     })();
+    // Move the topbar into the app container on small screens so it's visually grouped with the app
+    (function manageTopbarPlacement(){
+      try{
+        const topbar = document.querySelector('.topbar'); if(!topbar) return;
+        if(!topbar.__originalHost){ topbar.__originalHost = topbar.parentNode; topbar.__originalNext = topbar.nextSibling; }
+        const appEl = document.querySelector('.app'); if(!appEl) return;
+
+        // Diagnostic helper: logs placement info to the console for debugging on-device
+        function logPlacement(note){
+          try{
+            const rect = topbar.getBoundingClientRect();
+            const host = topbar.parentNode && topbar.parentNode.className ? topbar.parentNode.className : String(topbar.parentNode);
+            console.log('[topbar-placement]', note || '', {
+              width: window.innerWidth,
+              parent: host,
+              containsInApp: appEl.contains(topbar),
+              classes: topbar.className,
+              rect: {top: rect.top, left: rect.left, width: rect.width, height: rect.height},
+              offsetTop: topbar.offsetTop,
+              computed: window.getComputedStyle(topbar).cssText || window.getComputedStyle(topbar)
+            });
+          }catch(e){ console.warn('topbar log failed', e); }
+        }
+
+        function moveIn(){
+          try{
+            // If already moved and flagged, no-op
+            if(appEl.contains(topbar) && topbar.classList.contains('moved-to-app')) { logPlacement('already moved'); return; }
+            // Insert as the very first element inside .app so it visually sits above the sidebar/main
+            // Use firstElementChild to avoid inserting before text nodes
+            const ref = appEl.firstElementChild || appEl.firstChild;
+            if(ref) appEl.insertBefore(topbar, ref); else appEl.appendChild(topbar);
+            // add marker class and stronger inline pinning to ensure it visually sits at the top
+            topbar.classList.add('moved-to-app');
+            // Clear any previous inline offsets then apply forced pinned layout
+            topbar.style.position = 'absolute';
+            topbar.style.top = '0px';
+            topbar.style.left = '0px';
+            topbar.style.right = '0px';
+            topbar.style.zIndex = '9999';
+            // ensure the app main content isn't hidden under the pinned topbar
+            try{
+              const main = document.querySelector('.main');
+              if(main){ const h = Math.max(56, Math.round(topbar.getBoundingClientRect().height || 64)); main.style.paddingTop = (h + 8) + 'px'; }
+            }catch(e){}
+            logPlacement('moved in (forced)');
+          }catch(e){ console.warn('moveIn failed', e); }
+        }
+
+        function moveOut(){
+          try{
+            if(topbar.__originalHost && topbar.__originalHost.contains(topbar)) { logPlacement('already restored'); return; }
+            const host = topbar.__originalHost || document.body;
+            if(host){ if(topbar.__originalNext && topbar.__originalNext.parentNode === host) host.insertBefore(topbar, topbar.__originalNext); else host.appendChild(topbar); }
+            topbar.classList.remove('moved-to-app');
+            // remove forced inline styles (restore CSS control)
+            topbar.style.position = '';
+            topbar.style.top = '';
+            topbar.style.left = '';
+            topbar.style.right = '';
+            topbar.style.zIndex = '';
+            // restore main padding if present
+            try{ const main = document.querySelector('.main'); if(main) main.style.paddingTop = ''; }catch(e){}
+            logPlacement('moved out (restored)');
+          }catch(e){ console.warn('moveOut failed', e); }
+        }
+
+        // Use a slightly larger threshold so most phones/tablets get the mobile layout
+        function apply(){ if(window.innerWidth <= 960) moveIn(); else moveOut(); }
+
+        // run on DOM ready and on resize
+        document.addEventListener('DOMContentLoaded', apply);
+        window.addEventListener('resize', apply);
+        // also run shortly after load in case DOMContentLoaded already fired
+        setTimeout(apply, 20);
+        // expose a quick window helper so user can re-run or inspect from console
+        try{ window.__fd_debug_topbar = {log: logPlacement, apply: apply, moveIn: moveIn, moveOut: moveOut}; }catch(e){}
+      }catch(e){ console.warn('manageTopbarPlacement failed', e); }
+    })();
   </script>
   <div class="app">
     <aside id="sidebar" class="sidebar" style="overflow:auto;height:100vh;box-sizing:border-box;">
@@ -600,6 +736,46 @@
     }
     window.addEventListener('resize', enforceResponsiveSidebar);
     enforceResponsiveSidebar();
+    // Move classActionsBar into topbarActions on small screens to avoid tall sidebar pills
+    (function manageClassActionsPlacement(){
+      try{
+        const classActionsBar = document.getElementById('classActionsBar'); if(!classActionsBar) return;
+        // Ensure we remember original host for future restorations
+        if(!classActionsBar.__originalHost){ classActionsBar.__originalHost = classActionsBar.parentNode; classActionsBar.__originalNext = classActionsBar.nextSibling; }
+        function applyPlacement(){
+          try{
+            // Toggle a compact class when narrow, but keep the element inside .main.
+            if(window.innerWidth <= 560) classActionsBar.classList.add('compact-actions'); else classActionsBar.classList.remove('compact-actions');
+          }catch(e){console.warn('applyPlacement inner failed',e)}
+        }
+        window.addEventListener('resize', applyPlacement);
+        setTimeout(applyPlacement,20);
+      }catch(e){console.warn('manageClassActionsPlacement failed',e);} 
+    })();
+    // Move mobileMenuBtn into the main content area on small screens so it's at the top-left of main
+    (function manageMobileMenuPlacement(){
+      try{
+        const btn = document.getElementById('mobileMenuBtn'); if(!btn) return;
+        if(!btn.__originalHost){ btn.__originalHost = btn.parentNode; btn.__originalNext = btn.nextSibling; }
+        const appEl = document.querySelector('.app'); if(!appEl) return;
+        function moveIn(){
+          if(appEl.contains(btn) && btn.classList.contains('mobile-menu-main')) return;
+          // insert at the start of the app so it appears at the top-left of the app container
+          appEl.insertBefore(btn, appEl.firstChild);
+          btn.classList.add('mobile-menu-main');
+        }
+        function moveOut(){
+          if(btn.__originalHost && btn.__originalHost.contains(btn)) return;
+          // restore to original place
+          const host = btn.__originalHost || document.querySelector('.topbar');
+          if(host){ if(btn.__originalNext && btn.__originalNext.parentNode === host) host.insertBefore(btn, btn.__originalNext); else host.appendChild(btn); }
+          btn.classList.remove('mobile-menu-main');
+        }
+        function apply(){ if(window.innerWidth <= 560) moveIn(); else moveOut(); }
+        window.addEventListener('resize', apply);
+        setTimeout(apply, 20);
+      }catch(e){ console.warn('manageMobileMenuPlacement failed', e); }
+    })();
     // Global error handlers to help diagnose uncaught exceptions and promise rejections
     window.addEventListener('unhandledrejection', function (evt) {
       try {
