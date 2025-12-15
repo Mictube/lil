@@ -1986,8 +1986,11 @@
         inner.querySelector('#closeBlocked').addEventListener('click', ()=> closeModal(mb));
         // expose helper globally
         try{ window._lf_showBlockedSyncModal = showBlockedSyncModal; }catch(e){}
+        return mb;
       }catch(e){ console.warn('showBlockedSyncModal failed', e); }
     }
+    // Ensure the helper is available globally even before first invocation
+    try{ window._lf_showBlockedSyncModal = window._lf_showBlockedSyncModal || showBlockedSyncModal; }catch(e){}
 
     // Toast notification system (replaces native alert for nicer UX)
     (function(){
