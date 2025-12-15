@@ -442,7 +442,7 @@
         const { data } = await sup.auth.getSession();
         if(!data || !data.session){
           // not logged in — redirect to landing page
-          try{ window.location.href = 'landing.html'; }catch(e){ /* ignore */ }
+          try{ window.location.href = 'index.html'; }catch(e){ /* ignore */ }
         }
         // Set brand text to the signed-in user's first name and set `.logo` to initials.
         try{
@@ -488,6 +488,7 @@
         try{
           const sess = await sup.auth.getSession();
           const userId = sess && sess.data && (sess.data.session?.user?.id || sess.data.user?.id) ? (sess.data.session?.user?.id || sess.data.user?.id) : null;
+          try{ window._lf_current_user_id = userId; }catch(e){}
           if(userId){
             // First, sync any existing local classrooms up to the remote database so user data isn't lost
             try{
@@ -528,7 +529,7 @@
                     if(!localSnap || !localSnap.__updated_at || (remoteUpdated && new Date(remoteUpdated) > new Date(localSnap.__updated_at))){
                       const toSave = r.data || {};
                       try{ toSave.__updated_at = remoteUpdated; }catch(e){}
-                      try{ localStorage.setItem(classroomKey(r.id), JSON.stringify(toSave)); }catch(e){}
+                      try{ try{ toSave.__owner = userId; }catch(e){} localStorage.setItem(classroomKey(r.id), JSON.stringify(toSave)); }catch(e){}
                     }
                   }catch(e){}
                 });
@@ -551,7 +552,7 @@
                 // mark explicit logout to prevent auto-login and clear stored creds
                 try{ localStorage.setItem('lf_explicit_logout','true'); localStorage.removeItem('lf_email'); localStorage.removeItem('lf_remember'); }catch(e){}
                 await sup.auth.signOut();
-                window.location.href = 'landing.html';
+                window.location.href = 'index.html';
               }catch(e){ console.warn('sign out failed', e); signOutBtn.disabled = false; }
             });
           }
@@ -821,9 +822,18 @@
     function clearTombstone(id){ try{ localStorage.removeItem(tombstoneKey(id)); }catch(e){} }
     function getTombstoneMs(id){ try{ const v = localStorage.getItem(tombstoneKey(id)); return v ? parseInt(v,10) : 0 }catch(e){ return 0 } }
     function listClassrooms(){
-      const out = [];
-      for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if(!k) continue; if(k.indexOf(CLASSROOM_PREFIX)===0){ try{ const obj = JSON.parse(localStorage.getItem(k)); out.push({id:k.slice(CLASSROOM_PREFIX.length), name: obj && obj.__classroomName ? obj.__classroomName : ('Class ' + k.slice(CLASSROOM_PREFIX.length)), students: (obj && obj.students && obj.students.length) || 0, tasks: (obj && obj.tasks && obj.tasks.length) || 0}); }catch(e){} } }
-      out.sort((a,b)=>a.name.localeCompare(b.name)); return out;
+          const out = [];
+          const curUser = (typeof window !== 'undefined' && window._lf_current_user_id) ? window._lf_current_user_id : null;
+          for(let i=0;i<localStorage.length;i++){
+            const k = localStorage.key(i); if(!k) continue; if(k.indexOf(CLASSROOM_PREFIX)!==0) continue;
+            try{
+              const obj = JSON.parse(localStorage.getItem(k));
+              // If a current user is present, skip classrooms owned by a different user.
+              if(curUser && obj && obj.__owner && obj.__owner !== curUser) continue;
+              out.push({ id: k.slice(CLASSROOM_PREFIX.length), name: obj && obj.__classroomName ? obj.__classroomName : ('Class ' + k.slice(CLASSROOM_PREFIX.length)), students: (obj && obj.students && obj.students.length) || 0, tasks: (obj && obj.tasks && obj.tasks.length) || 0 });
+            }catch(e){}
+          }
+          out.sort((a,b)=>a.name.localeCompare(b.name)); return out;
     }
     async function saveClassroom(id, snapshot){
       // stamp snapshot with updated time
@@ -886,11 +896,11 @@
         const payload = { id: id, owner: userId, name: merged.__classroomName || null, data: merged, updated_at: merged.__updated_at };
         // upsert and request returned row when possible
         const upsertRes = await sup.from('classrooms').upsert(payload).select();
-        if(upsertRes && upsertRes.error){ console.warn('classrooms upsert error', upsertRes.error); try{ localStorage.setItem(classroomKey(id), JSON.stringify(merged)); }catch(e){} return false; }
+        if(upsertRes && upsertRes.error){ console.warn('classrooms upsert error', upsertRes.error); try{ try{ merged.__owner = userId; }catch(e){} localStorage.setItem(classroomKey(id), JSON.stringify(merged)); }catch(e){} return false; }
         // prefer authoritative data returned from the DB if present
         const returned = (upsertRes && upsertRes.data && Array.isArray(upsertRes.data) && upsertRes.data[0]) ? upsertRes.data[0] : null;
         const toCache = (returned && returned.data) ? returned.data : merged;
-        try{ localStorage.setItem(classroomKey(id), JSON.stringify(toCache)); }catch(e){}
+        try{ try{ toCache.__owner = userId; }catch(e){} localStorage.setItem(classroomKey(id), JSON.stringify(toCache)); }catch(e){}
         return true;
       }catch(e){ console.warn('sync classroom failed', e); try{ localStorage.setItem(classroomKey(id), JSON.stringify(snapshot)); }catch(e){} return false; }
     }
@@ -904,7 +914,7 @@
             const sup = window._lf_supabase; if(!sup) return;
             const res = await sup.from('classrooms').select('data, updated_at').eq('id', id).limit(1);
             const row = (!res.error && res.data && Array.isArray(res.data) && res.data.length) ? res.data[0] : null;
-            if(row && row.data){
+                  if(row && row.data){
               try{
                 // Only overwrite local if remote is newer and not blocked by a tombstone
                 const remoteUpdated = row.updated_at || null;
@@ -915,7 +925,7 @@
                 const localSnap = JSON.parse(localStorage.getItem(classroomKey(id)) || 'null');
                 if(!localSnap || !localSnap.__updated_at || (remoteUpdated && new Date(remoteUpdated) > new Date(localSnap.__updated_at))){
                   const toSave = row.data; try{ toSave.__updated_at = remoteUpdated; }catch(e){}
-                  localStorage.setItem(classroomKey(id), JSON.stringify(toSave));
+                  try{ try{ if(window && window._lf_current_user_id) toSave.__owner = window._lf_current_user_id; }catch(e){} localStorage.setItem(classroomKey(id), JSON.stringify(toSave)); }catch(e){}
                 }
               }catch(e){}
             }
@@ -939,7 +949,7 @@
           const remoteMs = remoteUpdated ? new Date(remoteUpdated).getTime() : 0;
           const tombMs = getTombstoneMs(id);
           if(tombMs && tombMs >= remoteMs) return null;
-          const toSave = row.data; try{ toSave.__updated_at = row.updated_at || new Date().toISOString(); }catch(e){}; try{ localStorage.setItem(classroomKey(id), JSON.stringify(toSave)); }catch(e){} return toSave;
+          const toSave = row.data; try{ toSave.__updated_at = row.updated_at || new Date().toISOString(); }catch(e){}; try{ try{ if(window && window._lf_current_user_id) toSave.__owner = window._lf_current_user_id; }catch(e){} localStorage.setItem(classroomKey(id), JSON.stringify(toSave)); }catch(e){} return toSave;
         }
       }catch(e){ console.warn('ensureClassLoaded failed', e); }
       return null;
@@ -1009,7 +1019,7 @@
                     }
                     if(dirty){
                       // update local cache and sync to DB
-                      try{ localStorage.setItem(classroomKey(cid), JSON.stringify(snap)); }catch(e){}
+                      try{ try{ if(window && window._lf_current_user_id) snap.__owner = window._lf_current_user_id; }catch(e){} localStorage.setItem(classroomKey(cid), JSON.stringify(snap)); }catch(e){}
                       try{ await saveClassroom(cid, snap); }catch(e){ console.warn('saveClassroom after photo upload failed', e); }
                     }
                   }catch(e){}
