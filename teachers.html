@@ -1343,9 +1343,40 @@
 
     function renderSidebar(){
       classListEl.innerHTML = '';
-      const classes = listClassrooms();
-      const active = [];
-      const archived = [];
+      (async ()=>{
+        // Default to local list
+        let classes = listClassrooms();
+        // If we have a Supabase client and an authenticated user, prefer remote rows
+        try{
+          const sup = window._lf_supabase;
+          const curUser = (window && window._lf_current_user_id) ? window._lf_current_user_id : null;
+          if(sup && curUser){
+            try{
+              const res = await sup.from('classrooms').select('id,data,updated_at').eq('owner', curUser);
+              if(!res.error && Array.isArray(res.data)){
+                // persist remote rows to localStorage (annotated) and build classes list from remote
+                const rows = res.data;
+                rows.forEach(r=>{
+                  try{
+                    const toSave = r.data || {};
+                    try{ toSave.__updated_at = r.updated_at || toSave.__updated_at || new Date().toISOString(); }catch(e){}
+                    try{ toSave.__owner = curUser; }catch(e){}
+                    try{ localStorage.setItem(classroomKey(r.id), JSON.stringify(toSave)); }catch(e){}
+                  }catch(e){}
+                });
+                classes = rows.map(r=>{
+                  const obj = r.data || {};
+                  return { id: r.id, name: obj.__classroomName || ('Class ' + r.id), students: (obj.students && obj.students.length) || 0, tasks: (obj.tasks && obj.tasks.length) || 0 };
+                });
+                // ensure sidebar consumers know DB is authoritative
+                try{ window._lf_db_only = true; }catch(e){}
+              }
+            }catch(e){ console.warn('renderSidebar remote fetch failed', e); }
+          }
+        }catch(e){ console.warn('renderSidebar sup check failed', e); }
+
+        const active = [];
+        const archived = [];
       // split by archived flag
       classes.forEach(c=>{
         try{
@@ -1357,7 +1388,7 @@
       // helper to render class icon (if saved)
       function getClassIconHtml(id){ try{ const snap = loadClassroom(id); if(snap && snap.__classIcon){ return `<div class='class-icon'><img src="${snap.__classIcon}" style="width:36px;height:36px;border-radius:8px;object-fit:cover"/></div>`; } }catch(e){} return `<div class='class-icon'>🏫</div>`; }
 
-      // Active classes
+        // Active classes
       if(active.length === 0){ const hint = document.createElement('div'); hint.style.color='#9aa7b8'; hint.textContent='No classes yet - add one below.'; classListEl.appendChild(hint); }
       active.forEach(c=>{
         const row = document.createElement('div'); row.className='class-item'; row.dataset.id = c.id;
