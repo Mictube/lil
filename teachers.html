@@ -506,10 +506,36 @@
                       if(!snap) continue;
                       const payload = { id: id, owner: uid, name: snap.__classroomName || null, data: snap, updated_at: snap.__updated_at || new Date().toISOString() };
                       try{ const sessLog = await supClient.auth.getSession().catch(()=>null); console.log('syncAllLocalToRemote upsert attempt', { userId: uid, session: sessLog && sessLog.data && sessLog.data.session ? sessLog.data.session.user?.id : null, payloadOwner: payload.owner, id: payload.id }); }catch(e){}
+                      // Check remote owner first to avoid triggering RLS update/using checks
+                      try{
+                        const existingQ = await supClient.from('classrooms').select('owner').eq('id', id).limit(1);
+                        const existingRow = (!existingQ.error && existingQ.data && Array.isArray(existingQ.data) && existingQ.data.length) ? existingQ.data[0] : null;
+                        if(existingRow && existingRow.owner && existingRow.owner !== uid){
+                          console.warn('Skipping sync for id with remote owner mismatch', { id: id, localOwner: uid, remoteOwner: existingRow.owner });
+                          // avoid retry noise by setting a tombstone so future automatic syncs skip it
+                          try{ setTombstone(id); }catch(e){}
+                          // show a one-time toast to inform the user
+                          try{ window.showToast && window.showToast('Skipped syncing class "' + (payload.name||id) + '" because it belongs to a different account.', {type:'warning', duration:6000}); }catch(e){}
+                          continue;
+                        }
+                      }catch(e){ console.warn('remote owner check failed', e); }
+
                       const upRes = await supClient.from('classrooms').upsert(payload);
                       if(upRes && upRes.error){
-                        console.warn('sync local->remote error', upRes.error);
-                        try{ if(upRes.error && upRes.error.code === '42501'){ try{ window.showToast && window.showToast('Sync blocked by DB policy (Row-Level Security). See Supabase table policies.', {type:'error', duration:8000}); }catch(e){} } }catch(e){}
+                        // Log full context for debugging
+                        console.warn('sync local->remote error', { id, payload, error: upRes.error });
+                        // If Row-Level Security blocked the write, set a tombstone so we
+                        // don't repeatedly retry the same failing row during manual syncs.
+                        try{
+                          if(upRes.error && String(upRes.error.code) === '42501'){
+                            try{ window.showToast && window.showToast('Skipped syncing "' + (payload.name||id) + '" — blocked by DB Row-Level Security. See Fix SQL (Show Fix SQL).', {type:'warning', duration:8000}); }catch(e){}
+                            try{ setTombstone(id); }catch(e){}
+                            // mark local snapshot for inspection
+                            try{ const cur = JSON.parse(localStorage.getItem(classroomKey(id))||'null') || {}; cur.__sync_blocked = { ts: Date.now(), reason: upRes.error.message || String(upRes.error) }; localStorage.setItem(classroomKey(id), JSON.stringify(cur)); }catch(e){}
+                            // continue to next item
+                            continue;
+                          }
+                        }catch(e){ console.warn('handling upsert error failed', e); }
                       }
                     }catch(e){ console.warn('sync single local classroom failed', e); }
                   }
@@ -529,8 +555,11 @@
                     b.innerHTML = `<div style="flex:1"><strong>Sync paused</strong><div style='color:#556;margin-top:4px'>Automatic sync is disabled because recent server writes were blocked. Enable after fixing Supabase RLS policies.</div></div>`;
                     const showSql = document.createElement('button'); showSql.className='small-btn'; showSql.textContent = 'Show Fix SQL';
                     const enableBtn = document.createElement('button'); enableBtn.className='action-btn'; enableBtn.textContent = 'Enable Sync';
+                    const blockedBtn = document.createElement('button'); blockedBtn.className = 'small-btn'; blockedBtn.textContent = 'Blocked items';
                     const dismiss = document.createElement('button'); dismiss.className='btn-muted'; dismiss.textContent = 'Dismiss';
                     b.appendChild(showSql); b.appendChild(enableBtn); b.appendChild(dismiss);
+                    // expose a quick entry to show blocked sync items
+                    try{ blockedBtn.addEventListener('click', ()=>{ try{ window._lf_showBlockedSyncModal && window._lf_showBlockedSyncModal(); }catch(e){} }); b.appendChild(blockedBtn); }catch(e){}
                     document.body.appendChild(b);
                     const fixSQL = "-- Run in Supabase SQL editor (owner column is uuid)\nALTER TABLE public.classrooms ENABLE ROW LEVEL SECURITY;\nCREATE POLICY \"classrooms_select_policy\" ON public.classrooms FOR SELECT TO authenticated USING ( owner = auth.uid() );\nCREATE POLICY \"classrooms_insert_policy\" ON public.classrooms FOR INSERT TO authenticated WITH CHECK ( owner = auth.uid() );\nCREATE POLICY \"classrooms_update_policy\" ON public.classrooms FOR UPDATE TO authenticated USING ( owner = auth.uid() ) WITH CHECK ( owner = auth.uid() );\nCREATE POLICY \"classrooms_delete_policy\" ON public.classrooms FOR DELETE TO authenticated USING ( owner = auth.uid() );";
                     showSql.addEventListener('click', ()=>{
@@ -556,6 +585,8 @@
                           catch(e){ console.warn('manual sync failed', e); if(window.showToast) window.showToast('Sync failed — check console', {type:'error'}); syncBtn.textContent = 'Sync Now'; syncBtn.disabled = false; }
                         });
                         topbarActionsEl.appendChild(syncBtn);
+                        // also add quick access to blocked items from the topbar
+                        try{ if(!document.getElementById('manualBlockedBtn')){ const mb = document.createElement('button'); mb.id = 'manualBlockedBtn'; mb.className = 'small-btn'; mb.textContent = 'Blocked'; mb.addEventListener('click', ()=>{ try{ window._lf_showBlockedSyncModal && window._lf_showBlockedSyncModal(); }catch(e){} }); topbarActionsEl.appendChild(mb); } }catch(e){}
                       }
                     }catch(e){}
                     dismiss.addEventListener('click', ()=>{ try{ b.remove(); }catch(e){} });
@@ -1870,6 +1901,92 @@
         // remove after animation
         setTimeout(()=>{ try{ mb.remove(); }catch(e){} }, 220);
       }catch(e){ try{ mb.remove(); }catch(err){} }
+    }
+
+    // Gather blocked sync items (local snapshots that were marked __sync_blocked)
+    function gatherBlockedSyncItems(){
+      const out = [];
+      try{
+        for(let i=0;i<localStorage.length;i++){
+          const k = localStorage.key(i); if(!k) continue; if(k.indexOf(CLASSROOM_PREFIX)!==0) continue;
+          try{
+            const id = k.slice(CLASSROOM_PREFIX.length);
+            const snap = JSON.parse(localStorage.getItem(k) || 'null'); if(!snap) continue;
+            if(snap && snap.__sync_blocked){ out.push({ id, name: snap.__classroomName || id, snapshot: snap, blocked: snap.__sync_blocked }); }
+          }catch(e){}
+        }
+      }catch(e){}
+      return out;
+    }
+
+    // Retry a blocked item by attempting a single saveClassroom and reporting result
+    async function retryBlockedItem(id){
+      try{
+        const snap = JSON.parse(localStorage.getItem(classroomKey(id)) || 'null'); if(!snap){ showToast('Snapshot missing', {type:'warning'}); return false; }
+        // clear the __sync_blocked marker before retry so UI is accurate
+        try{ delete snap.__sync_blocked; localStorage.setItem(classroomKey(id), JSON.stringify(snap)); }catch(e){}
+        const ok = await saveClassroom(id, snap);
+        if(ok){ showToast('Retry succeeded for ' + (snap.__classroomName || id), {type:'success'}); try{ renderSidebar(); }catch(e){} return true; }
+        showToast('Retry failed for ' + (snap.__classroomName || id), {type:'error'}); return false;
+      }catch(e){ console.warn('retryBlockedItem failed', e); showToast('Retry error', {type:'error'}); return false; }
+    }
+
+    // Duplicate a blocked class into the current user's account (new id)
+    async function duplicateBlockedToMyAccount(id){
+      try{
+        const snap = JSON.parse(localStorage.getItem(classroomKey(id)) || 'null'); if(!snap){ showToast('Snapshot missing', {type:'warning'}); return null; }
+        // clone and remove blocking metadata
+        const clone = JSON.parse(JSON.stringify(snap)); delete clone.__sync_blocked; delete clone.__owner; // new owner will be set on save
+        const newId = uid(); clone.__updated_at = new Date().toISOString();
+        try{ localStorage.setItem(classroomKey(newId), JSON.stringify(clone)); }catch(e){}
+        const ok = await saveClassroom(newId, clone);
+        if(ok){ showToast('Duplicated into your account', {type:'success'}); try{ renderSidebar(); }catch(e){} return newId; }
+        showToast('Duplicate save failed', {type:'error'}); return null;
+      }catch(e){ console.warn('duplicateBlockedToMyAccount failed', e); showToast('Duplicate error', {type:'error'}); return null; }
+    }
+
+    // Dismiss blocked marker (optionally clear tombstone if requested)
+    function dismissBlockedMarker(id, clearTomb=false){
+      try{
+        const snap = JSON.parse(localStorage.getItem(classroomKey(id)) || 'null'); if(!snap) return false;
+        delete snap.__sync_blocked; try{ localStorage.setItem(classroomKey(id), JSON.stringify(snap)); }catch(e){}
+        if(clearTomb){ try{ clearTombstone(id); }catch(e){} }
+        showToast('Dismissed blocked marker for ' + (snap.__classroomName || id), {type:'default'});
+        try{ renderSidebar(); }catch(e){}
+        return true;
+      }catch(e){ console.warn('dismissBlockedMarker failed', e); return false; }
+    }
+
+    // Modal UI: show blocked sync items with actions
+    function showBlockedSyncModal(){
+      try{
+        const items = gatherBlockedSyncItems();
+        const mb = document.createElement('div'); mb.className = 'modal-backdrop';
+        const inner = document.createElement('div'); inner.className = 'modal'; inner.style.maxWidth='760px';
+        inner.innerHTML = `<h3 style='margin-top:0'>Blocked sync items</h3><div style='margin-top:8px;font-size:13px;color:#556'>These classes were skipped during sync because the server blocked the write. You can Retry, Duplicate into your account, or Dismiss the marker.</div><div id='blockedList' style='margin-top:12px;max-height:48vh;overflow:auto'></div><div style='text-align:right;margin-top:12px'><button id='closeBlocked' class='btn-muted'>Close</button></div>`;
+        mb.appendChild(inner); document.body.appendChild(mb);
+        attachModalBehavior(mb);
+        const listEl = inner.querySelector('#blockedList');
+        if(!items || items.length === 0){ listEl.innerHTML = '<div style="color:#889;">No blocked items found.</div>'; }
+        items.forEach(it=>{
+          try{
+            const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:8px;border:1px solid #f0f2f6;margin-bottom:8px;background:#fff';
+            const left = document.createElement('div'); left.style.flex='1'; left.innerHTML = `<div style='font-weight:800'>${it.name}</div><div style='font-size:12px;color:#667'>${it.id} · ${new Date(it.blocked.ts || 0).toLocaleString()}</div><div style='font-size:12px;color:#a33;margin-top:6px'>${(it.blocked && it.blocked.reason) ? String(it.blocked.reason) : ''}</div>`;
+            const actions = document.createElement('div'); actions.style.display='flex'; actions.style.gap='8px';
+            const retry = document.createElement('button'); retry.className='small-btn'; retry.textContent='Retry';
+            const dup = document.createElement('button'); dup.className='action-btn'; dup.textContent='Duplicate';
+            const dismissBtn = document.createElement('button'); dismissBtn.className='btn-muted'; dismissBtn.textContent='Dismiss';
+            retry.addEventListener('click', async ()=>{ try{ retry.disabled=true; const ok = await retryBlockedItem(it.id); retry.disabled=false; if(ok){ row.style.opacity='0.5'; } }catch(e){ retry.disabled=false; } });
+            dup.addEventListener('click', async ()=>{ try{ dup.disabled=true; const newId = await duplicateBlockedToMyAccount(it.id); dup.disabled=false; if(newId){ row.style.opacity='0.5'; } }catch(e){ dup.disabled=false; } });
+            dismissBtn.addEventListener('click', ()=>{ try{ dismissBlockedMarker(it.id, false); row.remove(); }catch(e){} });
+            actions.appendChild(retry); actions.appendChild(dup); actions.appendChild(dismissBtn);
+            row.appendChild(left); row.appendChild(actions); listEl.appendChild(row);
+          }catch(e){}
+        });
+        inner.querySelector('#closeBlocked').addEventListener('click', ()=> closeModal(mb));
+        // expose helper globally
+        try{ window._lf_showBlockedSyncModal = showBlockedSyncModal; }catch(e){}
+      }catch(e){ console.warn('showBlockedSyncModal failed', e); }
     }
 
     // Toast notification system (replaces native alert for nicer UX)
