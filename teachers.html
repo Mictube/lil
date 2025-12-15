@@ -492,25 +492,76 @@
           if(userId){
             // First, sync any existing local classrooms up to the remote database so user data isn't lost
             try{
-              await (async function syncAllLocalToRemote(){
+              // Extracted and reusable sync function. We disable automatic sync by default
+              // to avoid repeated 403/RLS noise while the DB policies are being fixed.
+              async function syncAllLocalToRemote(supClient, uid){
                 try{
                   for(let i=0;i<localStorage.length;i++){
                     const k = localStorage.key(i); if(!k) continue; if(k.indexOf(CLASSROOM_PREFIX)!==0) continue;
                     try{
                       const id = k.slice(CLASSROOM_PREFIX.length);
-                      // skip syncing if a local tombstone exists (recent delete)
                       const tombMs = getTombstoneMs(id);
                       if(tombMs){ continue; }
                       const snap = JSON.parse(localStorage.getItem(k)||'null');
                       if(!snap) continue;
-                      // photos stored inside the JSON `data` field; avoid sending a top-level `photos` column
-                      const payload = { id: id, owner: userId, name: snap.__classroomName || null, data: snap, updated_at: snap.__updated_at || new Date().toISOString() };
-                      const { error } = await sup.from('classrooms').upsert(payload);
-                      if(error) console.warn('sync local->remote error', error);
+                      const payload = { id: id, owner: uid, name: snap.__classroomName || null, data: snap, updated_at: snap.__updated_at || new Date().toISOString() };
+                      try{ const sessLog = await supClient.auth.getSession().catch(()=>null); console.log('syncAllLocalToRemote upsert attempt', { userId: uid, session: sessLog && sessLog.data && sessLog.data.session ? sessLog.data.session.user?.id : null, payloadOwner: payload.owner, id: payload.id }); }catch(e){}
+                      const upRes = await supClient.from('classrooms').upsert(payload);
+                      if(upRes && upRes.error){
+                        console.warn('sync local->remote error', upRes.error);
+                        try{ if(upRes.error && upRes.error.code === '42501'){ try{ window.showToast && window.showToast('Sync blocked by DB policy (Row-Level Security). See Supabase table policies.', {type:'error', duration:8000}); }catch(e){} } }catch(e){}
+                      }
                     }catch(e){ console.warn('sync single local classroom failed', e); }
                   }
                 }catch(e){ console.warn('syncAllLocalToRemote failed', e); }
-              })();
+              }
+
+              // Only run automatic sync if explicitly enabled. Default: disabled.
+              if(window._lf_enable_sync){
+                await syncAllLocalToRemote(sup, userId);
+              } else {
+                console.log('Auto sync disabled (window._lf_enable_sync=false). Manual sync available.');
+                // show a small non-blocking banner so the user can enable sync or copy the SQL fix
+                try{
+                  if(!document.getElementById('lf-sync-banner')){
+                    const b = document.createElement('div'); b.id = 'lf-sync-banner';
+                    b.style.cssText = 'position:fixed;left:16px;right:16px;bottom:18px;background:linear-gradient(90deg,#fff8fb,#f0fbff);border:1px solid rgba(11,18,32,0.06);padding:12px 14px;border-radius:12px;z-index:99999;display:flex;align-items:center;gap:12px;box-shadow:0 12px 36px rgba(10,12,30,0.06);font-size:14px';
+                    b.innerHTML = `<div style="flex:1"><strong>Sync paused</strong><div style='color:#556;margin-top:4px'>Automatic sync is disabled because recent server writes were blocked. Enable after fixing Supabase RLS policies.</div></div>`;
+                    const showSql = document.createElement('button'); showSql.className='small-btn'; showSql.textContent = 'Show Fix SQL';
+                    const enableBtn = document.createElement('button'); enableBtn.className='action-btn'; enableBtn.textContent = 'Enable Sync';
+                    const dismiss = document.createElement('button'); dismiss.className='btn-muted'; dismiss.textContent = 'Dismiss';
+                    b.appendChild(showSql); b.appendChild(enableBtn); b.appendChild(dismiss);
+                    document.body.appendChild(b);
+                    const fixSQL = "-- Run in Supabase SQL editor (owner column is uuid)\nALTER TABLE public.classrooms ENABLE ROW LEVEL SECURITY;\nCREATE POLICY \"classrooms_select_policy\" ON public.classrooms FOR SELECT TO authenticated USING ( owner = auth.uid() );\nCREATE POLICY \"classrooms_insert_policy\" ON public.classrooms FOR INSERT TO authenticated WITH CHECK ( owner = auth.uid() );\nCREATE POLICY \"classrooms_update_policy\" ON public.classrooms FOR UPDATE TO authenticated USING ( owner = auth.uid() ) WITH CHECK ( owner = auth.uid() );\nCREATE POLICY \"classrooms_delete_policy\" ON public.classrooms FOR DELETE TO authenticated USING ( owner = auth.uid() );";
+                    showSql.addEventListener('click', ()=>{
+                      const mb = document.createElement('div'); mb.className='modal-backdrop'; mb.style.cssText='position:fixed;inset:0;background:rgba(10,12,20,0.45);display:flex;align-items:center;justify-content:center;z-index:100000';
+                      const inner = document.createElement('div'); inner.style.cssText='background:#fff;padding:14px;border-radius:10px;max-width:760px;max-height:70vh;overflow:auto;font-size:13px';
+                      inner.innerHTML = `<h3 style='margin:0 0 8px 0'>Supabase RLS Fix SQL</h3><pre style='white-space:pre-wrap;background:#f7f9fc;padding:12px;border-radius:8px;overflow:auto;'>${fixSQL}</pre><div style='text-align:right;margin-top:12px'><button id='copySql' class='action-btn'>Copy</button><button id='closeSql' class='btn-muted' style='margin-left:8px'>Close</button></div>`;
+                      mb.appendChild(inner); document.body.appendChild(mb);
+                      mb.querySelector('#copySql').addEventListener('click', ()=>{ try{ navigator.clipboard.writeText(fixSQL); if(window.showToast) window.showToast('SQL copied to clipboard'); }catch(e){ if(window.showToast) window.showToast('Copy failed'); } });
+                      mb.querySelector('#closeSql').addEventListener('click', ()=>{ try{ mb.remove(); }catch(e){} });
+                    });
+                    enableBtn.addEventListener('click', async ()=>{
+                      try{ window._lf_enable_sync = true; enableBtn.disabled = true; enableBtn.textContent = 'Enabling…'; await syncAllLocalToRemote(sup, userId); if(window.showToast) window.showToast('Manual sync attempted — check console for details'); b.remove(); }catch(e){ console.warn(e); if(window.showToast) window.showToast('Sync attempt failed — check console'); enableBtn.disabled = false; enableBtn.textContent = 'Enable Sync'; }
+                    });
+                    // Expose the callable sync function for debugging from the console
+                    try{ window._lf_syncAllLocalToRemote = async function(){ try{ const sClient = window._lf_supabase || sup; const sess = await sClient.auth.getSession().catch(()=>null); const uid = (window._lf_current_user_id) ? window._lf_current_user_id : (sess && sess.data && (sess.data.session?.user?.id || sess.data.user?.id) ? (sess.data.session?.user?.id || sess.data.user?.id) : null); return await syncAllLocalToRemote(sClient, uid); }catch(e){ console.warn('window._lf_syncAllLocalToRemote failed', e); throw e; } }; }catch(e){}
+                    // Add a small 'Sync Now' button into topbarActions for convenience
+                    try{
+                      const topbarActionsEl = document.getElementById('topbarActions');
+                      if(topbarActionsEl && !document.getElementById('manualSyncBtn')){
+                        const syncBtn = document.createElement('button'); syncBtn.id = 'manualSyncBtn'; syncBtn.className = 'small-btn'; syncBtn.textContent = 'Sync Now';
+                        syncBtn.addEventListener('click', async ()=>{
+                          try{ syncBtn.disabled = true; const prev = syncBtn.textContent; syncBtn.textContent = 'Syncing…'; await window._lf_syncAllLocalToRemote(); if(window.showToast) window.showToast('Sync complete', {type:'success'}); syncBtn.textContent = prev; syncBtn.disabled = false; }
+                          catch(e){ console.warn('manual sync failed', e); if(window.showToast) window.showToast('Sync failed — check console', {type:'error'}); syncBtn.textContent = 'Sync Now'; syncBtn.disabled = false; }
+                        });
+                        topbarActionsEl.appendChild(syncBtn);
+                      }
+                    }catch(e){}
+                    dismiss.addEventListener('click', ()=>{ try{ b.remove(); }catch(e){} });
+                  }
+                }catch(e){ console.warn('failed to create sync banner', e); }
+              }
             }catch(e){ console.warn('syncAllLocalToRemote failed', e); }
 
             // fetch remote classrooms and merge into localStorage (remote wins if newer)
@@ -895,8 +946,15 @@
 
         const payload = { id: id, owner: userId, name: merged.__classroomName || null, data: merged, updated_at: merged.__updated_at };
         // upsert and request returned row when possible
+        try{ const sessLog = await sup.auth.getSession().catch(()=>null); console.log('saveClassroom upsert', { userId: userId, session: sessLog && sessLog.data && sessLog.data.session ? sessLog.data.session.user?.id : null, id }); }catch(e){}
         const upsertRes = await sup.from('classrooms').upsert(payload).select();
-        if(upsertRes && upsertRes.error){ console.warn('classrooms upsert error', upsertRes.error); try{ try{ merged.__owner = userId; }catch(e){} localStorage.setItem(classroomKey(id), JSON.stringify(merged)); }catch(e){} return false; }
+        if(upsertRes && upsertRes.error){
+          console.warn('classrooms upsert error', upsertRes.error);
+          try{ if(upsertRes.error && upsertRes.error.code === '42501'){ try{ window.showToast && window.showToast('Sync blocked by DB policy (Row-Level Security). Check Supabase policies for table `classrooms`.', {type:'error', duration:8000}); }catch(e){} }
+          }catch(e){}
+          try{ try{ merged.__owner = userId; }catch(e){} localStorage.setItem(classroomKey(id), JSON.stringify(merged)); }catch(e){}
+          return false;
+        }
         // prefer authoritative data returned from the DB if present
         const returned = (upsertRes && upsertRes.data && Array.isArray(upsertRes.data) && upsertRes.data[0]) ? upsertRes.data[0] : null;
         const toCache = (returned && returned.data) ? returned.data : merged;
@@ -1343,40 +1401,9 @@
 
     function renderSidebar(){
       classListEl.innerHTML = '';
-      (async ()=>{
-        // Default to local list
-        let classes = listClassrooms();
-        // If we have a Supabase client and an authenticated user, prefer remote rows
-        try{
-          const sup = window._lf_supabase;
-          const curUser = (window && window._lf_current_user_id) ? window._lf_current_user_id : null;
-          if(sup && curUser){
-            try{
-              const res = await sup.from('classrooms').select('id,data,updated_at').eq('owner', curUser);
-              if(!res.error && Array.isArray(res.data)){
-                // persist remote rows to localStorage (annotated) and build classes list from remote
-                const rows = res.data;
-                rows.forEach(r=>{
-                  try{
-                    const toSave = r.data || {};
-                    try{ toSave.__updated_at = r.updated_at || toSave.__updated_at || new Date().toISOString(); }catch(e){}
-                    try{ toSave.__owner = curUser; }catch(e){}
-                    try{ localStorage.setItem(classroomKey(r.id), JSON.stringify(toSave)); }catch(e){}
-                  }catch(e){}
-                });
-                classes = rows.map(r=>{
-                  const obj = r.data || {};
-                  return { id: r.id, name: obj.__classroomName || ('Class ' + r.id), students: (obj.students && obj.students.length) || 0, tasks: (obj.tasks && obj.tasks.length) || 0 };
-                });
-                // ensure sidebar consumers know DB is authoritative
-                try{ window._lf_db_only = true; }catch(e){}
-              }
-            }catch(e){ console.warn('renderSidebar remote fetch failed', e); }
-          }
-        }catch(e){ console.warn('renderSidebar sup check failed', e); }
-
-        const active = [];
-        const archived = [];
+      const classes = listClassrooms();
+      const active = [];
+      const archived = [];
       // split by archived flag
       classes.forEach(c=>{
         try{
@@ -1388,7 +1415,7 @@
       // helper to render class icon (if saved)
       function getClassIconHtml(id){ try{ const snap = loadClassroom(id); if(snap && snap.__classIcon){ return `<div class='class-icon'><img src="${snap.__classIcon}" style="width:36px;height:36px;border-radius:8px;object-fit:cover"/></div>`; } }catch(e){} return `<div class='class-icon'>🏫</div>`; }
 
-        // Active classes
+      // Active classes
       if(active.length === 0){ const hint = document.createElement('div'); hint.style.color='#9aa7b8'; hint.textContent='No classes yet - add one below.'; classListEl.appendChild(hint); }
       active.forEach(c=>{
         const row = document.createElement('div'); row.className='class-item'; row.dataset.id = c.id;
